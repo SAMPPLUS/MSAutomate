@@ -6,6 +6,14 @@ import xlwings as xw
 from datetime import date
 import getpass
 
+class Job:
+    def __init__(self):
+        self.fileName = str()
+        self.userName = str()
+        self.uId = int()
+        self.jobId = int()
+        self.downloadLink = str()
+
 def LastFirst(name):
     """Flips name into LAST, FIRST or LAST, FIRST MIDDLE format. No change to single-word names.
      ex: 'John Doe' -> 'Doe, John'... 'Jane Marie Doe' -> 'Doe, Jane Marie'... 'Kevin' -> 'Kevin'."""
@@ -20,14 +28,18 @@ def LastFirst(name):
 
     return name
 
-def AddToQueue(user, file):
+def CheckExists(user,file):
+    pass
+
+def AddToQueue(user, file, path):
     """Adds row to spreadsheet with patron and file names"""
     i = 4
     while True:
         val = str(i)
         cell = sht.range('A' + val)
         if cell.value is None:
-            cell.value = [d1, user, file]
+            print("queue:", file)
+            cell.value = [d1, user, file, None, None, f"=HYPERLINK(\"{path}\", \"{user}'s folder\")"]
             break
         i+= 1
 
@@ -64,6 +76,8 @@ browser.get('https://3dprime.lib.msu.edu/?t=all_jobs')
 
 rawInfo =  browser.find_elements_by_css_selector("div[class='card prime_long_card mb-9']")
 
+jobList = []
+
 fileNameList = []
 userNameList = []
 userNameSet = set()
@@ -72,41 +86,62 @@ if len(rawInfo) == 0:
     print("no new files.")
 
 for el in rawInfo:
-    #file name
+    job = Job()
+    print(type(el))
+    print(el)
+    #file name  
     text = el.text
-    ind = text.lower().find('.stl') + 4
-    fileName = text[:ind]
-    fileNameList.append(fileName)
+    fileNameEnd = text.lower().find('.stl') + 4
+    fileName = text[:fileNameEnd]
+    job.fileName = fileName
     #user name
-    st = text.find('Submitted by') + 13
-    en = text.find('Price') - 1
+    userNameStart = text.find('Submitted by') + 13
+    userNameEnd = text.find('Price') - 1
     #TODO: beware of last name 'Price'
-    name = (text[st:en])
+    name = (text[userNameStart:userNameEnd])
+    #uid
+    uidStart = text.find('&uid=') + 5
+    uidEnd = text.find('&job_id=')
 
-    userNameList.append(name)
+
+    job.userName = name
     userNameSet.add(name)
+    jobList.append(job)
 
 
 #download
 downloadLinks = browser.find_elements_by_css_selector("a[aria-label='Download file']")
 
+assert (len(downloadLinks) == len(jobList))
+
+for i, link in enumerate(downloadLinks):
+    jobList[i].downloadLink = link
+
+
 os.chdir(r"C:\\Users\samdp\Downloads")
 
-startSz = len(glob.glob("*.stl"))
+
 
 print("downloading...")
 clickCount = 0
 j = 0
 for link in downloadLinks:
-    if userNameList[j] == "Sam Peterson":
-        link.click()
-        clickCount += 1
+    #if userNameList[j] == "Sam Peterson":
+    #    link.click()
+    #    clickCount += 1
         #time.sleep(1)
-    j += 1
+
+    #if CheckExists(userNameList[j],fileNameList[j]):
+    #    print("skip: ", fileNameList[j])
+
+    #j += 1
+    pass
 
 timer = 0
+startSize = len(glob.glob("*.stl"))
 try:
-    while len(glob.glob("*.stl")) < (startSz + clickCount):
+    # loops until all files have completed downloading
+    while len(glob.glob("*.stl")) < (startSize + clickCount):
         if timer == 10:
             print("this is taking a while...(press ctrl+c to continue anyway)")
         time.sleep(1)
@@ -122,22 +157,28 @@ for file in glob.glob("*.stl"):
     shutil.move(file,file[5:])
 
 #move files to proper directory and update queue
-i = 0
-while i < len(fileNameList):
-    try:
-        AddToQueue(userNameList[i],fileNameList[i][:-4])
-    except Exception as e: 
-        print(e)
-        print("failed to add to queue " + fileNameList[i])
-    try:
-        if not os.path.exists(r"C:\\Users\samdp\Desktop\\Projects\\MakerSpaceAutomation\August 2019\\" + LastFirst(userNameList[i])):
-            os.mkdir(r"C:\\Users\samdp\Desktop\\Projects\\MakerSpaceAutomation\August 2019\\" + LastFirst(userNameList[i]))
-        shutil.move(fileNameList[i], r"C:\\Users\samdp\Desktop\\Projects\\MakerSpaceAutomation\August 2019\\" + LastFirst(userNameList[i]))
-    except Exception as e: 
-        print(e)
-        print("failed to move " + fileNameList[i])
+i = 0  
 
-    i+= 1
+for job in jobList:
+    path = r"C:\\Users\samdp\Desktop\\Projects\\MakerSpaceAutomation\August 2019\\" + LastFirst(job.userName)
+
+
+    try:
+        AddToQueue(job.userName,job.fileName[:-4], path)
+
+    except Exception as e: 
+        print("failed to add to queue " + job.fileName + " - ", e)
+
+    try:
+        if not os.path.exists(path):
+            print("Making Directory:", path)
+            os.mkdir(path)
+        shutil.move(job.fileName, path)
+        print("moving to directory:", path)
+
+    except Exception as e: 
+        print("failed to move " + job.fileName  + " - ", e)
+
 
 print("file movement complete")
 
