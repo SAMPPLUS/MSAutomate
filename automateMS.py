@@ -51,6 +51,7 @@ with open("data.json", "r") as dataFile:
 
 filePath = data["filePath"]
 downloadPath = data["downloadPath"]
+driverPath = data["driverPath"]
 
 #initialize excel
 
@@ -62,7 +63,7 @@ sht = wb.sheets[0]
 
 #initialize web driver
 
-browser = webdriver.Chrome()
+browser = webdriver.Chrome(executable_path=driverPath)
 
 browser.get('https://3dprime.lib.msu.edu/')
 
@@ -127,17 +128,16 @@ for i, link in enumerate(downloadLinks):
 
 
 os.chdir(downloadPath)
-
+startSize = len(glob.glob("*.stl"))
 
 
 print("downloading...")
 clickCount = 0
 j = 0
 for link in downloadLinks:
-    #if userNameList[j] == "Sam Peterson":
-    #    link.click()
-    #    clickCount += 1
-        #time.sleep(1)
+    link.click()
+    clickCount += 1
+    time.sleep(1)
 
     #if CheckExists(userNameList[j],fileNameList[j]):
     #    print("skip: ", fileNameList[j])
@@ -146,7 +146,7 @@ for link in downloadLinks:
     pass
 
 timer = 0
-startSize = len(glob.glob("*.stl"))
+
 try:
     # loops until all files have completed downloading
     while len(glob.glob("*.stl")) < (startSize + clickCount):

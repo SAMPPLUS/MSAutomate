@@ -1,4 +1,5 @@
 {
     "filePath": "<path of folders goes here>",
-    "downloadPath": "<path to download directory goes here>"
+    "downloadPath": "<path to download directory goes here>",
+    "driverPath": "<path to chromedriver goes here>"
 }
