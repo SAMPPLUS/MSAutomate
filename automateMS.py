@@ -5,6 +5,7 @@ import time
 import xlwings as xw
 from datetime import date
 import getpass
+import json
 
 class Job:
     def __init__(self):
@@ -43,6 +44,13 @@ def AddToQueue(user, file, path):
             break
         i+= 1
 
+
+
+with open("data.json", "r") as dataFile:
+    data = json.load(dataFile)
+
+filePath = data["filePath"]
+downloadPath = data["downloadPath"]
 
 #initialize excel
 
@@ -97,7 +105,7 @@ for el in rawInfo:
     #user name
     userNameStart = text.find('Submitted by') + 13
     userNameEnd = text.find('Price') - 1
-    #TODO: beware of last name 'Price'
+    # beware of last name 'Price'
     name = (text[userNameStart:userNameEnd])
     #uid
     uidStart = text.find('&uid=') + 5
@@ -118,7 +126,7 @@ for i, link in enumerate(downloadLinks):
     jobList[i].downloadLink = link
 
 
-os.chdir(r"C:\\Users\samdp\Downloads")
+os.chdir(downloadPath)
 
 
 
@@ -160,7 +168,7 @@ for file in glob.glob("*.stl"):
 i = 0  
 
 for job in jobList:
-    path = r"C:\\Users\samdp\Desktop\\Projects\\MakerSpaceAutomation\August 2019\\" + LastFirst(job.userName)
+    path = filePath + LastFirst(job.userName)
 
 
     try:
@@ -182,4 +190,4 @@ for job in jobList:
 
 print("file movement complete")
 
-webbrowser.open(r"C:\\Users\samdp\Desktop\\Projects\\MakerSpaceAutomation\August 2019")
+webbrowser.open(filePath)
