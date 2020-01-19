@@ -165,8 +165,8 @@ except KeyboardInterrupt:
 print("downloads complete")
 
 #rename to disinclude 3DP added numbers
-#for file in glob.glob("*.stl"):
-#    shutil.move(file,file[5:])
+for file in glob.glob("*.stl"):
+    shutil.move(file,file[5:])
 
 #move files to proper directory and update queue
 i = 0  
