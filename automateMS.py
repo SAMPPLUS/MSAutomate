@@ -64,7 +64,7 @@ sht = wb.sheets[0]
 
 #initialize web driver
 
-browser = webdriver.Chrome(executable_path=driverPath)
+browser = webdriver.Chrome()
 
 browser.get('https://3dprime.lib.msu.edu/')
 
