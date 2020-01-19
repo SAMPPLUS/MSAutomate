@@ -14,6 +14,7 @@ class Job:
         self.uId = int()
         self.jobId = int()
         self.downloadLink = str()
+        self.infoLink = str()
 
 def LastFirst(name):
     """Flips name into LAST, FIRST or LAST, FIRST MIDDLE format. No change to single-word names.
@@ -32,7 +33,7 @@ def LastFirst(name):
 def CheckExists(user,file):
     pass
 
-def AddToQueue(user, file, path):
+def AddToQueue(user, file, path, infoLink):
     """Adds row to spreadsheet with patron and file names"""
     i = 4
     while True:
@@ -40,7 +41,7 @@ def AddToQueue(user, file, path):
         cell = sht.range('A' + val)
         if cell.value is None:
             print("queue:", file)
-            cell.value = [d1, user, file, None, None, f"=HYPERLINK(\"{path}\", \"{user}'s folder\")"]
+            cell.value = [d1, user, file, None, None, f"=HYPERLINK(\"{path}\", \"{user}'s folder\")", f"=HYPERLINK(\"{infoLink}\", \"Job Info\")" ]
             break
         i+= 1
 
@@ -97,8 +98,6 @@ if len(rawInfo) == 0:
 
 for el in rawInfo:
     job = Job()
-    print(type(el))
-    print(el)
     #file name  
     text = el.text
     fileNameEnd = text.lower().find('.stl') + 4
@@ -109,15 +108,19 @@ for el in rawInfo:
     userNameEnd = text.find('Price') - 1
     # beware of last name 'Price'
     name = (text[userNameStart:userNameEnd])
+    job.userName = name
+    userNameSet.add(name)
     #uid
     uidStart = text.find('&uid=') + 5
     uidEnd = text.find('&job_id=')
 
 
-    job.userName = name
-    userNameSet.add(name)
     jobList.append(job)
 
+#info
+infoLinks = browser.find_elements_by_css_selector("a[class='btn btn-dark prime_float_right']")
+for i, link in enumerate(infoLinks):
+    jobList[i].infoLink = link.get_attribute("href")
 
 #download
 downloadLinks = browser.find_elements_by_css_selector("a[aria-label='Download file']")
@@ -162,8 +165,8 @@ except KeyboardInterrupt:
 print("downloads complete")
 
 #rename to disinclude 3DP added numbers
-for file in glob.glob("*.stl"):
-    shutil.move(file,file[5:])
+#for file in glob.glob("*.stl"):
+#    shutil.move(file,file[5:])
 
 #move files to proper directory and update queue
 i = 0  
@@ -173,7 +176,7 @@ for job in jobList:
 
 
     try:
-        AddToQueue(job.userName,job.fileName[:-4], path)
+        AddToQueue(job.userName,job.fileName[:-4], path, job.infoLink)
 
     except Exception as e: 
         print("failed to add to queue " + job.fileName + " - ", e)
@@ -189,6 +192,6 @@ for job in jobList:
         print("failed to move " + job.fileName  + " - ", e)
 
 
-print("file movement complete")
-
+print("file movement complete. I am done.")
+browser.quit()
 webbrowser.open(filePath)
