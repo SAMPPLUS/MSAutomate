@@ -52,13 +52,14 @@ with open("data.json", "r") as dataFile:
 filePath = data["filePath"]
 downloadPath = data["downloadPath"]
 driverPath = data["driverPath"]
+queuePath = data["queuePath"]
 
 #initialize excel
 
 today = date.today()
 d1 = today.strftime("%m/%d/%Y")
 
-wb = xw.Book('example.xlsx')
+wb = xw.Book(queuePath)
 sht = wb.sheets[0]
 
 #initialize web driver
