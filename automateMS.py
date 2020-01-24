@@ -6,6 +6,7 @@ import xlwings as xw
 from datetime import date
 import getpass
 import json
+import re
 
 class Job:
     def __init__(self):
@@ -15,6 +16,11 @@ class Job:
         self.jobId = int()
         self.downloadLink = str()
         self.infoLink = str()
+        self.skip = False
+
+    def __repr__(self):
+        rep = f"{self.fileName} - {self.userName}"
+        return rep
 
 def LastFirst(name):
     """Flips name into LAST, FIRST or LAST, FIRST MIDDLE format. No change to single-word names.
@@ -46,6 +52,7 @@ def AddToQueue(user, file, path, infoLink):
         i+= 1
 
 
+# read data
 
 with open("data.json", "r") as dataFile:
     data = json.load(dataFile)
@@ -71,9 +78,9 @@ browser.get('https://3dprime.lib.msu.edu/')
 
 #Login
 loggedIn = 0
-emailElem = browser.find_element_by_name('email')
 
 if not loggedIn:
+    emailElem = browser.find_element_by_name('email')
     email = input("email: ")
     password = getpass.getpass()
     emailElem.send_keys(email)
@@ -98,11 +105,17 @@ if len(rawInfo) == 0:
 
 for el in rawInfo:
     job = Job()
-    #file name  
+    #file name
     text = el.text
-    fileNameEnd = text.lower().find('.stl') + 4
-    fileName = text[:fileNameEnd]
-    job.fileName = fileName
+    StlPattern = re.compile(".*\.(stl)")
+    match = re.search(StlPattern, text.lower())
+    if match:
+        fileName = match.group(0)
+        job.fileName = fileName
+        print(fileName)
+    else:
+        job.skip = True
+        print("non-stl")
     #user name
     userNameStart = text.find('Submitted by') + 13
     userNameEnd = text.find('Price') - 1
@@ -116,7 +129,6 @@ for el in rawInfo:
 
 
     jobList.append(job)
-
 #info
 infoLinks = browser.find_elements_by_css_selector("a[class='btn btn-dark prime_float_right']")
 for i, link in enumerate(infoLinks):
@@ -128,7 +140,7 @@ downloadLinks = browser.find_elements_by_css_selector("a[aria-label='Download fi
 assert (len(downloadLinks) == len(jobList))
 
 for i, link in enumerate(downloadLinks):
-    jobList[i].downloadLink = link
+    jobList[i].downloadLink = link.get_attribute("href")
 
 
 os.chdir(downloadPath)
@@ -138,10 +150,13 @@ startSize = len(glob.glob("*.stl"))
 print("downloading...")
 clickCount = 0
 j = 0
-for link in downloadLinks:
-    link.click()
+for job in jobList:
+    if job.skip:
+        continue
+    print("getting", job.downloadLink)
+    browser.get(job.downloadLink)
     clickCount += 1
-    time.sleep(1)
+    #time.sleep(1)
 
     #if CheckExists(userNameList[j],fileNameList[j]):
     #    print("skip: ", fileNameList[j])
@@ -151,11 +166,14 @@ for link in downloadLinks:
 
 timer = 0
 
+#print("start size:", startSize)
+#print("click count:", clickCount)
+
 try:
     # loops until all files have completed downloading
     while len(glob.glob("*.stl")) < (startSize + clickCount):
         if timer == 10:
-            print("this is taking a while...(press ctrl+c to continue anyway)")
+            print("this is taking a while...(press ctrl+c to continue anyway)", f"[{len(glob.glob('*.stl'))}/{(startSize + clickCount)}]")
         time.sleep(1)
         timer += 1
 except KeyboardInterrupt:
@@ -172,9 +190,9 @@ for file in glob.glob("*.stl"):
 i = 0  
 
 for job in jobList:
+    if job.skip:
+        continue
     path = filePath + LastFirst(job.userName)
-
-
     try:
         AddToQueue(job.userName,job.fileName[:-4], path, job.infoLink)
 
@@ -183,7 +201,7 @@ for job in jobList:
 
     try:
         if not os.path.exists(path):
-            print("Making Directory:", path)
+            print("Creating Directory:", path)
             os.mkdir(path)
         shutil.move(job.fileName, path)
         print("moving to directory:", path)
@@ -195,3 +213,4 @@ for job in jobList:
 print("file movement complete. I am done.")
 browser.quit()
 webbrowser.open(filePath)
+done = input()
