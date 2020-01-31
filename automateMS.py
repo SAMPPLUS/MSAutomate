@@ -50,7 +50,7 @@ def AddToQueue(user, file, path, infoLink):
         cell = sht.range('A' + val)
         if cell.value is None:
             print("queue:", file)
-            cell.value = [d1, user, file, None, None, f"=HYPERLINK(\"{path}\", \"{user}'s folder\")", f"=HYPERLINK(\"{infoLink}\", \"Job Info\")" ]
+            cell.value = [d1, user, file, f"=HYPERLINK(\"{infoLink}\", \"Job Info\")", f"=HYPERLINK(\"{path}\", \"{user}'s folder\")" ]
             break
         i+= 1
 
