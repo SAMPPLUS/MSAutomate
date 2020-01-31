@@ -16,11 +16,14 @@ class Job:
         self.jobId = int()
         self.downloadLink = str()
         self.infoLink = str()
-        self.skip = False
+        self.skip = True
+        self.show = True
 
     def __repr__(self):
         rep = f"{self.fileName} - {self.userName}"
         return rep
+
+clear = lambda: os.system('cls')
 
 def LastFirst(name):
     """Flips name into LAST, FIRST or LAST, FIRST MIDDLE format. No change to single-word names.
@@ -50,6 +53,75 @@ def AddToQueue(user, file, path, infoLink):
             cell.value = [d1, user, file, None, None, f"=HYPERLINK(\"{path}\", \"{user}'s folder\")", f"=HYPERLINK(\"{infoLink}\", \"Job Info\")" ]
             break
         i+= 1
+
+def DisplayJobs(jobList, useSet, status):
+    clear()
+    print(status, '\n')
+
+    print(len(jobList), "AVAILABLE JOBS:")
+    for i, job in enumerate(jobList):
+        print(f"[{i+1}] - {job}")
+    
+    print("\n[e] - execute with selected jobs")
+    print("[a] - execute all")
+    if len(useSet) == 0:
+        useSet = "{}"
+    print("selected jobs:", useSet)
+
+def ChooseJobs(jobList):
+    visibleList = []
+    for job in jobList:
+        if job.show:
+            visibleList.append(job)
+
+    status = "Choose how to proceed"
+    useSet = set()
+
+    while True:
+        DisplayJobs(visibleList, useSet, status)
+        user_input = input()
+
+        if user_input.isalpha():
+
+            if user_input.lower() == 'e':
+                if len(useSet) < 1:
+                    status = "please select at least one job"
+                else:
+                    status = "executing " + useSet.__repr__()
+                    for el in useSet:
+                        visibleList[el-1].skip = False
+                    break
+
+
+            elif user_input.lower() == 'a':
+                status = "executing all"
+                for job in visibleList:
+                    job.skip = False
+                break
+
+            else:
+                status = "unrecognized command"
+
+        elif user_input.isdecimal():
+
+            if (int(user_input) < 1) or (int(user_input) > len(visibleList)):
+                status = ("Error - Out of Range")
+
+            else:
+
+                if int(user_input) in useSet:
+                    useSet.remove(int(user_input))
+                    status = "removed " + (user_input)
+
+                else:
+                    useSet.add(int(user_input))
+                    status ="added " + (user_input)
+        else:
+            status = "unrecognized command"
+    
+    clear()
+    print(status)
+    return visibleList
 
 
 # read data
@@ -112,10 +184,9 @@ for el in rawInfo:
     if match:
         fileName = match.group(0)
         job.fileName = fileName
-        print(fileName)
     else:
+        job.show = False
         job.skip = True
-        print("non-stl")
     #user name
     userNameStart = text.find('Submitted by') + 13
     userNameEnd = text.find('Price') - 1
@@ -129,6 +200,9 @@ for el in rawInfo:
 
 
     jobList.append(job)
+
+
+
 #info
 infoLinks = browser.find_elements_by_css_selector("a[class='btn btn-dark prime_float_right']")
 for i, link in enumerate(infoLinks):
@@ -142,10 +216,10 @@ assert (len(downloadLinks) == len(jobList))
 for i, link in enumerate(downloadLinks):
     jobList[i].downloadLink = link.get_attribute("href")
 
+jobList = ChooseJobs(jobList)
 
 os.chdir(downloadPath)
 startSize = len(glob.glob("*.stl"))
-
 
 print("downloading...")
 clickCount = 0
@@ -156,7 +230,6 @@ for job in jobList:
     print("getting", job.downloadLink)
     browser.get(job.downloadLink)
     clickCount += 1
-    #time.sleep(1)
 
     #if CheckExists(userNameList[j],fileNameList[j]):
     #    print("skip: ", fileNameList[j])
@@ -172,7 +245,7 @@ timer = 0
 try:
     # loops until all files have completed downloading
     while len(glob.glob("*.stl")) < (startSize + clickCount):
-        if timer == 10:
+        if timer == 9:
             print("this is taking a while...(press ctrl+c to continue anyway)", f"[{len(glob.glob('*.stl'))}/{(startSize + clickCount)}]")
         time.sleep(1)
         timer += 1
