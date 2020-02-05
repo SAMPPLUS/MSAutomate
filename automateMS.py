@@ -1,4 +1,5 @@
 from selenium import webdriver
+from pathlib import Path
 import os, glob, shutil
 import webbrowser
 import time
@@ -129,22 +130,18 @@ def ChooseJobs(jobList):
 with open("data.json", "r") as dataFile:
     data = json.load(dataFile)
 
-filePath = data["filePath"]
-downloadPath = data["downloadPath"]
-driverPath = data["driverPath"]
+filePath = Path(data["filePath"])
+downloadPath = Path(data["downloadPath"])
+driverPath = Path(data["driverPath"])
 queuePath = data["queuePath"]
 
-#initialize excel
-
-today = date.today()
-d1 = today.strftime("%m/%d/%Y")
-
-wb = xw.Book(queuePath)
-sht = wb.sheets[0]
-
 #initialize web driver
+print(filePath.__repr__())
+options = webdriver.ChromeOptions() 
+prefs = {'download.default_directory' : str(downloadPath)}
+options.add_experimental_option('prefs', prefs)
 
-browser = webdriver.Chrome()
+browser = webdriver.Chrome(options=options)
 
 browser.get('https://3dprime.lib.msu.edu/')
 
@@ -219,6 +216,10 @@ for i, link in enumerate(downloadLinks):
 jobList = ChooseJobs(jobList)
 
 os.chdir(downloadPath)
+files = glob.glob("*")
+for f in files:
+    os.remove(f)
+
 startSize = len(glob.glob("*.stl"))
 
 print("downloading...")
@@ -254,10 +255,18 @@ except KeyboardInterrupt:
     
     
 print("downloads complete")
-
 #rename to disinclude 3DP added numbers
 for file in glob.glob("*.stl"):
     shutil.move(file,file[5:])
+
+
+#initialize excel
+
+today = date.today()
+d1 = today.strftime("%m/%d/%Y")
+
+wb = xw.Book(queuePath)
+sht = wb.sheets[0]
 
 #move files to proper directory and update queue
 i = 0  
@@ -265,7 +274,7 @@ i = 0
 for job in jobList:
     if job.skip:
         continue
-    path = filePath + LastFirst(job.userName)
+    path = filePath / LastFirst(job.userName)
     try:
         AddToQueue(job.userName,job.fileName[:-4], path, job.infoLink)
 
@@ -273,7 +282,7 @@ for job in jobList:
         print("failed to add to queue " + job.fileName + " - ", e)
 
     try:
-        if not os.path.exists(path):
+        if not path.exists():
             print("Creating Directory:", path)
             os.mkdir(path)
         shutil.move(job.fileName, path)
