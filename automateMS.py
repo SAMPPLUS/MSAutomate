@@ -136,7 +136,6 @@ driverPath = Path(data["driverPath"])
 queuePath = data["queuePath"]
 
 #initialize web driver
-print(filePath.__repr__())
 options = webdriver.ChromeOptions() 
 prefs = {'download.default_directory' : str(downloadPath)}
 options.add_experimental_option('prefs', prefs)
